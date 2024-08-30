@@ -360,6 +360,9 @@ class TextToSpeech:
         text_tokens = torch.IntTensor(self.tokenizer.encode(text)).unsqueeze(0).to(self.device)
         text_tokens = F.pad(text_tokens, (0, 1))  # This may not be necessary.
         assert text_tokens.shape[-1] < 400, 'Too much text provided. Break the text up into separate segments and re-try inference.'
+
+        text_chunks = [text[i:i + stream_chunk_size] for i in range(0, len(text), stream_chunk_size)]
+
         if voice_samples is not None:
             auto_conditioning = self.get_conditioning_latents(voice_samples, return_mels=False)
         else:
@@ -397,6 +400,7 @@ class TextToSpeech:
             wav_overlap = None
             is_end = False
             first_buffer = 60
+            text_chunk_index = 0
             while not is_end:
                 try:
                     with torch.autocast(
@@ -416,8 +420,13 @@ class TextToSpeech:
                     wav_chunk, wav_gen_prev, wav_overlap = self.handle_chunks(
                         wav_gen.squeeze(), wav_gen_prev, wav_overlap, overlap_wav_len
                     )
+                    try:
+                        text_chunk = text_chunks[text_chunk_index]
+                    except IndexError:
+                        text_chunk = ''
+                    yield wav_chunk, text_chunk
+                    text_chunk_index += 1
                     codes_ = []
-                    yield wav_chunk
     def tts(self, text, voice_samples=None, k=1, verbose=True, use_deterministic_seed=None,
             # autoregressive generation parameters follow
             num_autoregressive_samples=512, temperature=.8, length_penalty=1, repetition_penalty=2.0, 
