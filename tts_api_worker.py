@@ -97,7 +97,8 @@ def main():
                             print('Canceled')
                             break
                         if any(api_worker.progress_input_params):
-                            text_chunk_queue.append(api_worker.progress_input_params.pop(0)[0])
+                            print('New input')
+                            text_chunk_queue.append(api_worker.progress_input_params.pop(0)[0].get('text_input'))
                     except AttributeError:
                         print('Legacy mode! Update api worker interface to receive progress input parameters')
                     stream = tts.tts_stream(
@@ -127,7 +128,8 @@ def main():
                                 print('Canceled')
                                 break
                             if api_worker.progress_input_params:
-                                text_chunk_queue.append(api_worker.progress_input_params.pop(0)[0])
+                                print('New input')
+                                text_chunk_queue.append(api_worker.progress_input_params.pop(0)[0].get('text_input'))
                         except AttributeError:
                             pass
                         counter += 1
@@ -150,7 +152,7 @@ def main():
                 while True:
                     if api_worker.progress_data_received:
                         break
-                        
+                print('Done')
                 api_worker.send_job_results({'model_name': 'tortoise_tts'})
 
             else:
@@ -166,8 +168,12 @@ def main():
                         sample_rate=24000,
                     )
                     output['audio_output'] = buffer
-                    api_worker.send_job_results(output)        
-
+                    output['text_output'] = text
+                    api_worker.stream_progress(1, output)     
+                while True:
+                    if api_worker.progress_data_received:
+                        break   
+                api_worker.send_job_results({'model_name': 'tortoise_tts'})
         except ValueError as exc:
             print('Error', exc)
             continue

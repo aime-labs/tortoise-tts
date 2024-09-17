@@ -424,6 +424,7 @@ class TextToSpeech:
                         text_chunk = text_chunks[text_chunk_index]
                     except IndexError:
                         text_chunk = ''
+
                     yield wav_chunk, text_chunk
                     text_chunk_index += 1
                     codes_ = []
