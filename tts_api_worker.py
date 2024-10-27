@@ -64,9 +64,9 @@ def get_flags():
 
 def main():
     args = get_flags()
-    if torch.backends.mps.is_available():
-        args.use_deepspeed = False
+
     if args.stream:
+        print('Using Streaming Interface.')
         tts = TextToSpeechFast(models_dir=args.model_dir, use_deepspeed=args.use_deepspeed, kv_cache=args.kv_cache, half=args.half)
     else:
         tts = TextToSpeech(models_dir=args.model_dir, use_deepspeed=args.use_deepspeed, kv_cache=args.kv_cache, half=args.half, device_only=True)
@@ -145,10 +145,7 @@ def main():
                             while True:
                                 if api_worker.progress_data_received:
                                     break
-                            try:
-                                api_worker.stream_progress(counter, output)
-                            except AttributeError:
-                                api_worker.send_progress(counter, output)
+                            api_worker.send_progress(counter, output)
                 while True:
                     if api_worker.progress_data_received:
                         break
@@ -169,11 +166,7 @@ def main():
                     )
                     output['audio_output'] = buffer
                     output['text_output'] = text
-                    api_worker.stream_progress(1, output)     
-                while True:
-                    if api_worker.progress_data_received:
-                        break   
-                api_worker.send_job_results({'model_name': 'tortoise_tts'})
+                    api_worker.send_job_results(output)
         except ValueError as exc:
             print('Error', exc)
             continue
